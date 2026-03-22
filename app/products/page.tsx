@@ -14,17 +14,19 @@ const Page = () => {
     const { user } = useUser()
     const email = user?.primaryEmailAddress?.emailAddress as string
     const [products, setProducts] = useState<Product[]>([])
+    const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
     const fetchProducts = async () => {
         try {
             if (email) {
-                const products = await readProducts(email)
-                if (products) {
-                    setProducts(products)
+                const productsData = await readProducts(email)
+                if (productsData) {
+                    setProducts(productsData)
                 }
             }
         } catch (error) {
-            console.error(error)
+            console.error("Erreur lors du chargement des produits:", error)
+            toast.error("Erreur lors du chargement des produits")
         }
     }
 
@@ -34,32 +36,46 @@ const Page = () => {
     }, [email])
 
     const handleDeleteProduct = async (product: Product) => {
-        const confirmDelete = confirm("Voulez-vous vraiment supprimer ce produit ?")
+        const confirmDelete = confirm(`Voulez-vous vraiment supprimer "${product.name}" ?`)
         if (!confirmDelete) return;
+        
+        // Éviter les suppressions multiples
+        if (isDeleting === product.id) return;
+        
+        setIsDeleting(product.id)
+        
         try {
-            if (product.imageUrl) {
-                const resDelete = await fetch("/api/upload", {
+            // 1. Supprimer l'image si elle existe
+            if (product.imageUrl && product.imageUrl !== "") {
+                const deleteImageRes = await fetch("/api/upload", {
                     method: "DELETE",
                     body: JSON.stringify({ path: product.imageUrl }),
                     headers: { 'Content-Type': 'application/json' }
                 })
-                const dataDelete = await resDelete.json()
-                if (!dataDelete.success) {
-                    throw new Error("Erreur lors de la suppression de l’image.")
+                
+                if (!deleteImageRes.ok) {
+                    console.warn("Erreur lors de la suppression de l'image")
                 } else {
-                    if (email) {
-                        await deleteProduct(product.id, email)
-                        await fetchProducts()
-                        toast.success("Produit supprimé avec succès ")
+                    const imageData = await deleteImageRes.json()
+                    if (!imageData.success) {
+                        console.warn(imageData.message || "Erreur lors de la suppression de l'image")
                     }
                 }
             }
+            
+            // 2. Supprimer le produit de la base de données
+            if (email) {
+                await deleteProduct(product.id, email)
+                await fetchProducts() // Recharger la liste
+                toast.success(`"${product.name}" supprimé avec succès`)
+            }
         } catch (error) {
-            console.error(error)
+            console.error("Erreur lors de la suppression:", error)
+            toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression du produit")
+        } finally {
+            setIsDeleting(null)
         }
     }
-
-
 
     return (
         <Wrapper>
@@ -75,7 +91,7 @@ const Page = () => {
                     <table className='table'>
                         <thead>
                             <tr>
-                                <th></th>
+                                <th>#</th>
                                 <th>Image</th>
                                 <th>Nom</th>
                                 <th>Description</th>
@@ -91,33 +107,44 @@ const Page = () => {
                                     <th>{index + 1}</th>
                                     <td>
                                         <ProductImage
-                                            src={product.imageUrl}
-                                            alt={product.imageUrl}
+                                            src={product.imageUrl || "/placeholder-image.jpg"}
+                                            alt={product.name}
                                             heightClass='h-12'
                                             widthClass='w-12'
                                         />
                                     </td>
-                                    <td>
+                                    <td className='font-medium'>
                                         {product.name}
                                     </td>
-                                    <td>
+                                    <td className='max-w-xs truncate'>
                                         {product.description}
                                     </td>
                                     <td>
-                                        {product.price} FCFA
+                                        {product.price.toLocaleString()} FCFA
                                     </td>
                                     <td className='capitalize'>
-                                        {product.quantity} {product.unit}
+                                        {product.quantity || 0} {product.unit || "pcs"}
                                     </td>
                                     <td>
-                                        {product.categoryName}
+                                        {product.categoryName || "Non catégorisé"}
                                     </td>
-                                    <td className='flex gap-2 flex-col'>
-                                        <Link className='btn btn-xs w-fit btn-primary' href={`/update-product/${product.id}`}>
+                                    <td className='flex gap-2'>
+                                        <Link 
+                                            className='btn btn-xs btn-primary' 
+                                            href={`/update-product/${product.id}`}
+                                        >
                                             Modifier
                                         </Link>
-                                        <button className='btn btn-xs w-fit' onClick={() => handleDeleteProduct(product)}>
-                                            <Trash className='w-4 h-4' />
+                                        <button 
+                                            className='btn btn-xs btn-error' 
+                                            onClick={() => handleDeleteProduct(product)}
+                                            disabled={isDeleting === product.id}
+                                        >
+                                            {isDeleting === product.id ? (
+                                                <span className="loading loading-spinner loading-xs"></span>
+                                            ) : (
+                                                <Trash className='w-4 h-4' />
+                                            )}
                                         </button>
                                     </td>
                                 </tr>
