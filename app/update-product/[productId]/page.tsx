@@ -16,6 +16,7 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
     const [product, setProduct] = useState<Product | null>(null)
     const [file, setFile] = useState<File | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const [formData, setFormData] = useState<FormDataType>({
         id: "",
         name: "",
@@ -39,12 +40,14 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                         description: fetchedProduct.description,
                         price: fetchedProduct.price,
                         imageUrl: fetchedProduct.imageUrl || "",
-                        categoryName: fetchedProduct.categoryName
+                        categoryName: fetchedProduct.categoryName,
+                        unit: fetchedProduct.unit // Ajout de l'unité si nécessaire
                     })
                 }
             }
         } catch (error) {
             console.error(error)
+            toast.error("Erreur lors du chargement du produit")
         }
     }
 
@@ -67,48 +70,86 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        let imageUrl = formData?.imageUrl
-
         e.preventDefault()
+        
+        // Éviter les soumissions multiples
+        if (isSubmitting) return
+        
+        // Validation des champs
+        if (!formData.name || !formData.description || !formData.price) {
+            toast.error("Veuillez remplir tous les champs obligatoires.")
+            return
+        }
+        
+        setIsSubmitting(true)
+        
         try {
+            let imageUrl = formData.imageUrl
+            
+            // Si une nouvelle image a été sélectionnée
             if (file) {
-                const resDelete = await fetch("/api/upload", {
-                    method: "DELETE",
-                    body: JSON.stringify({ path: formData.imageUrl }),
-                    headers: { 'Content-Type': 'application/json' }
-                })
-                const dataDelete = await resDelete.json()
-                if (!dataDelete.success) {
-                    throw new Error("Erreur lors de la suppression de l’image.")
+                // 1. Supprimer l'ancienne image si elle existe
+                if (formData.imageUrl && formData.imageUrl !== "") {
+                    const deleteRes = await fetch("/api/upload", {
+                        method: "DELETE",
+                        body: JSON.stringify({ path: formData.imageUrl }),
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    
+                    if (!deleteRes.ok) {
+                        console.warn("Erreur lors de la suppression de l'ancienne image")
+                    } else {
+                        const deleteData = await deleteRes.json()
+                        if (!deleteData.success) {
+                            console.warn(deleteData.message)
+                        }
+                    }
                 }
-
+                
+                // 2. Upload de la nouvelle image
                 const imageData = new FormData()
                 imageData.append("file", file)
-                const res = await fetch("/api/upload", {
+                
+                const uploadRes = await fetch("/api/upload", {
                     method: "POST",
                     body: imageData
                 })
-
-                const data = await res.json()
-                if (!data.success) {
-                    throw new Error("Erreur lors de l’upload de l’image.")
+                
+                if (!uploadRes.ok) {
+                    throw new Error(`Erreur upload: ${uploadRes.status}`)
                 }
-
-                imageUrl = data.path
-                formData.imageUrl = imageUrl
-
-                await updateProduct(formData, email)
-                toast.success("Produit mis à jour avec succès !")
-                router.push("/products")
-            } else {
-                // Si pas de nouvelle image, juste mettre à jour le produit
-                await updateProduct(formData, email)
-                toast.success("Produit mis à jour avec succès !")
-                router.push("/products")
+                
+                const uploadData = await uploadRes.json()
+                
+                if (!uploadData.success) {
+                    throw new Error(uploadData.message || "Erreur lors de l'upload de l'image")
+                }
+                
+                imageUrl = uploadData.path
             }
+            
+            // 3. Créer l'objet de mise à jour avec la nouvelle image (ou l'ancienne)
+            const updateData: FormDataType = {
+                id: formData.id,
+                name: formData.name,
+                description: formData.description,
+                price: formData.price,
+                imageUrl: imageUrl,
+                categoryName: formData.categoryName,
+                unit: formData.unit
+            }
+            
+            // 4. Mettre à jour le produit
+            await updateProduct(updateData, email)
+            
+            toast.success("Produit mis à jour avec succès !")
+            router.push("/products")
+            
         } catch (error) {
-            console.error(error)
+            console.error("Erreur lors de la mise à jour:", error)
             toast.error(error instanceof Error ? error.message : "Erreur lors de la mise à jour")
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -120,8 +161,8 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                         <h1 className='text-2xl font-bold mb-4'>
                             Mise à jour du produit
                         </h1>
-                        <div className='flex md:flex-row flex-col md:items-center'>
-                            <form className='space-y-2' onSubmit={handleSubmit}>
+                        <div className='flex md:flex-row flex-col md:items-start'>
+                            <form className='space-y-2 md:w-[450px]' onSubmit={handleSubmit}>
                                 <div className='text-sm font-semibold mb-2'>Nom</div>
                                 <input
                                     type="text"
@@ -130,7 +171,9 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                                     className='input input-bordered w-full'
                                     value={formData.name}
                                     onChange={handleInputChange}
+                                    required
                                 />
+                                
                                 <div className='text-sm font-semibold mb-2'>Description</div>
                                 <textarea
                                     name="description"
@@ -138,8 +181,8 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                                     className='textarea textarea-bordered w-full'
                                     value={formData.description}
                                     onChange={handleInputChange}
-                                >
-                                </textarea>
+                                    required
+                                />
 
                                 <div className='text-sm font-semibold mb-2'>Catégorie</div>
                                 <input
@@ -147,74 +190,81 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                                     name="categoryName"
                                     className='input input-bordered w-full'
                                     value={formData.categoryName}
-                                    onChange={handleInputChange}
                                     disabled
                                 />
-                                <div className='text-sm font-semibold mb-2'>Image / Prix Unitaire</div>
+                                
+                                <div className='text-sm font-semibold mb-2'>Prix Unitaire</div>
+                                <input
+                                    type="number"
+                                    name="price"
+                                    placeholder="Prix"
+                                    className='input input-bordered w-full'
+                                    value={formData.price}
+                                    onChange={handleInputChange}
+                                    required
+                                    step="0.01"
+                                />
+                                
+                                <div className='text-sm font-semibold mb-2'>Nouvelle image (optionnel)</div>
+                                <input
+                                    type="file"
+                                    accept='image/*'
+                                    className='file-input file-input-bordered w-full'
+                                    onChange={handleFileChange}
+                                />
 
-                                <div className='flex'>
-                                    <input
-                                        type="file"
-                                        accept='image/*'
-                                        placeholder="Prix"
-                                        className='file-input file-input-bordered w-full'
-                                        onChange={handleFileChange}
-                                    />
-
-                                    <input
-                                        type="number"
-                                        name="price"
-                                        placeholder="Prix"
-                                        className='input input-bordered w-full ml-4'
-                                        value={formData.price}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-
-                                <button type='submit' className='btn btn-primary mt-3'>
-                                    Mettre à jour
+                                <button 
+                                    type='submit' 
+                                    className='btn btn-primary mt-3 w-full'
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? "Mise à jour en cours..." : "Mettre à jour"}
                                 </button>
                             </form>
 
-                            <div className='flex md:flex-col md:ml-4 mt-4 md:mt-0'>
-                                <div className='md:ml-4 md:w-[200px] mt-4 md:mt-0 border-2 border-primary md:h-[200px] p-5 justify-center items-center rounded-3xl hidden md:flex'>
-                                    {formData.imageUrl && formData.imageUrl !== "" ? (
-                                        <div>
+                            <div className='flex md:flex-col md:ml-8 mt-8 md:mt-0'>
+                                {/* Image actuelle */}
+                                <div className='mb-4'>
+                                    <div className='text-sm font-semibold mb-2 text-center'>Image actuelle</div>
+                                    <div className='border-2 border-primary w-[200px] h-[200px] p-5 flex justify-center items-center rounded-3xl'>
+                                        {formData.imageUrl && formData.imageUrl !== "" ? (
                                             <ProductImage
                                                 src={formData.imageUrl}
                                                 alt={product.name}
                                                 heightClass='h-40'
                                                 widthClass='w-40'
                                             />
-                                        </div>
-                                    ) : (
-                                        <div className='wiggle-animation'>
-                                            <FileImage strokeWidth={1} className='h-10 w-10 text-primary' />
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <div className='wiggle-animation'>
+                                                <FileImage strokeWidth={1} className='h-10 w-10 text-primary' />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
-                                <div className='md:ml-4 w-full md:w-[200px] mt-4 border-2 border-primary md:h-[200px] p-5 flex justify-center items-center rounded-3xl md:mt-4'>
-                                    {previewUrl && previewUrl !== "" ? (
-                                        <div>
+                                {/* Aperçu de la nouvelle image */}
+                                <div>
+                                    <div className='text-sm font-semibold mb-2 text-center'>Aperçu nouvelle image</div>
+                                    <div className='border-2 border-primary w-[200px] h-[200px] p-5 flex justify-center items-center rounded-3xl'>
+                                        {previewUrl && previewUrl !== "" ? (
                                             <ProductImage
                                                 src={previewUrl}
                                                 alt="preview"
                                                 heightClass='h-40'
                                                 widthClass='w-40'
                                             />
-                                        </div>
-                                    ) : (
-                                        <div className='wiggle-animation'>
-                                            <FileImage strokeWidth={1} className='h-10 w-10 text-primary' />
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <div className='wiggle-animation'>
+                                                <FileImage strokeWidth={1} className='h-10 w-10 text-primary' />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className='flex justify-center items-center w-full'>
+                    <div className='flex justify-center items-center w-full min-h-[400px]'>
                         <span className="loading loading-spinner loading-xl"></span>
                     </div>
                 )}
