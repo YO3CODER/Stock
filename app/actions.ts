@@ -44,7 +44,7 @@ export async function createCategory(
     try {
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
         await sql`
             INSERT INTO category (name, description, "associationId") 
@@ -68,7 +68,7 @@ export async function updateCategory(
     try {
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         await sql`
@@ -89,7 +89,7 @@ export async function deleteCategory(id: string, email: string): Promise<void> {
     try {
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         await sql`
@@ -109,7 +109,7 @@ export async function readCategories(email: string): Promise<Category[]> {
     try {
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         const categories = await sql`
@@ -135,7 +135,7 @@ export async function createProduct(formData: FormDataType, email: string): Prom
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         await sql`
@@ -156,7 +156,7 @@ export async function updateProduct(formData: FormDataType, email: string): Prom
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         await sql`
@@ -177,7 +177,7 @@ export async function deleteProduct(id: string, email: string): Promise<void> {
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         await sql`
@@ -197,7 +197,7 @@ export async function readProducts(email: string): Promise<Product[]> {
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         const products = await sql`
@@ -223,7 +223,7 @@ export async function readProductById(productId: string, email: string): Promise
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         const products = await sql`
@@ -239,7 +239,7 @@ export async function readProductById(productId: string, email: string): Promise
     }
 }
 
-export async function replenishStockWithTransaction(productId: string, quantity: number, email: string): Promise<void> {
+export async function replenishStockWithTransaction(productId: string, quantity: number, email: string): Promise<{ success: boolean; message?: string }> {
     try {
         if (quantity <= 0) {
             throw new Error("La quantité à ajouter doit être supérieure à zéro.")
@@ -251,7 +251,7 @@ export async function replenishStockWithTransaction(productId: string, quantity:
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         await sql`
@@ -264,12 +264,15 @@ export async function replenishStockWithTransaction(productId: string, quantity:
             INSERT INTO transaction (type, quantity, "productId", "associationId")
             VALUES ('IN', ${quantity}, ${productId}, ${association.id})
         `
+        
+        return { success: true }
     } catch (error) {
         console.error(error)
+        return { success: false, message: error instanceof Error ? error.message : "Erreur lors du réapprovisionnement" }
     }
 }
 
-export async function deductStockWithTransaction(orderItems: OrderItem[], email: string): Promise<{ success: boolean; message?: any }> {
+export async function deductStockWithTransaction(orderItems: OrderItem[], email: string): Promise<{ success: boolean; message?: string }> {
     try {
         if (!email) {
             throw new Error("l'email est requis.")
@@ -277,7 +280,7 @@ export async function deductStockWithTransaction(orderItems: OrderItem[], email:
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         // Vérifier les stocks
@@ -316,7 +319,7 @@ export async function deductStockWithTransaction(orderItems: OrderItem[], email:
         return { success: true }
     } catch (error) {
         console.error(error)
-        return { success: false, message: error }
+        return { success: false, message: error instanceof Error ? error.message : "Erreur lors du don" }
     }
 }
 
@@ -328,7 +331,7 @@ export async function getTransactions(email: string, limit?: number): Promise<Tr
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         const transactions = await sql`
@@ -352,7 +355,6 @@ export async function getTransactions(email: string, limit?: number): Promise<Tr
         return []
     }
 }
-
 export async function getProductOverviewStats(email: string): Promise<ProductOverviewStats> {
     try {
         if (!email) {
@@ -361,12 +363,12 @@ export async function getProductOverviewStats(email: string): Promise<ProductOve
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         const products = await sql`
             SELECT * FROM product WHERE "associationId" = ${association.id}
-        `
+        ` as Product[]
 
         const transactions = await sql`
             SELECT * FROM transaction WHERE "associationId" = ${association.id}
@@ -382,8 +384,8 @@ export async function getProductOverviewStats(email: string): Promise<ProductOve
         const totalProducts = products.length
         const totalCategories = categories.length
         const totalTransactions = transactions.length
-        const stockValue = products.reduce((acc: number, product: any) => {
-            return acc + Number(product.price) * product.quantity
+        const stockValue = products.reduce((acc: number, product: Product) => {
+            return acc + (Number(product.price) * (product.quantity || 0))
         }, 0)
 
         return {
@@ -411,7 +413,7 @@ export async function getProductCategoryDistribution(email: string): Promise<{ n
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         const R = 5
@@ -433,11 +435,7 @@ export async function getProductCategoryDistribution(email: string): Promise<{ n
     }
 }
 
-
-
-
-
-export async function sellStockWithTransaction(orderItems: OrderItem[], email: string): Promise<{ success: boolean; message?: any }> {
+export async function sellStockWithTransaction(orderItems: OrderItem[], email: string): Promise<{ success: boolean; message?: string }> {
     try {
         if (!email) {
             throw new Error("l'email est requis.")
@@ -445,7 +443,7 @@ export async function sellStockWithTransaction(orderItems: OrderItem[], email: s
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         // Vérifier les stocks
@@ -490,13 +488,6 @@ export async function sellStockWithTransaction(orderItems: OrderItem[], email: s
     }
 }
 
-
-
-
-
-
-
-
 export async function getStockSummary(email: string): Promise<StockSummary> {
     try {
         if (!email) {
@@ -505,7 +496,7 @@ export async function getStockSummary(email: string): Promise<StockSummary> {
 
         const association = await getAssociation(email)
         if (!association) {
-            throw new Error("Aucune association trouvée avec cet email.");
+            throw new Error("Aucune association trouvée avec cet email.")
         }
 
         const allProducts = await sql`
@@ -517,9 +508,9 @@ export async function getStockSummary(email: string): Promise<StockSummary> {
 
         const products = allProducts as Product[]
         
-        const inStock = products.filter((p: Product) => p.quantity > 5)
-        const lowStock = products.filter((p: Product) => p.quantity > 0 && p.quantity <= 5)
-        const outOfStock = products.filter((p: Product) => p.quantity === 0)
+        const inStock = products.filter((p: Product) => (p.quantity || 0) > 5)
+        const lowStock = products.filter((p: Product) => (p.quantity || 0) > 0 && (p.quantity || 0) <= 5)
+        const outOfStock = products.filter((p: Product) => (p.quantity || 0) === 0)
         const criticalProducts = [...lowStock, ...outOfStock]
         
         return {

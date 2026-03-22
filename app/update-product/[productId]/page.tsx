@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 
-const page = ({ params }: { params: Promise<{ productId: string }> }) => {
+const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
 
 
     const { user } = useUser()
@@ -225,4 +225,4 @@ const page = ({ params }: { params: Promise<{ productId: string }> }) => {
     )
 }
 
-export default page
+export default Page

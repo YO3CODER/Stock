@@ -1,7 +1,7 @@
 'use client'
 
 import { UserButton, useUser } from '@clerk/nextjs'
-import { LayoutDashboard, ListTree, Menu, PackagePlus, ShoppingBasket, Warehouse, X, HandHeart, Receipt, ShoppingCart } from 'lucide-react'
+import { LayoutDashboard, ListTree, Menu, PackagePlus, ShoppingBasket, Warehouse, X, Receipt, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
