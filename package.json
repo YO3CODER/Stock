@@ -13,7 +13,7 @@
     "@neondatabase/serverless": "^1.0.2",
     "@prisma/client": "^6.19.2",
     "lucide-react": "^0.488.0",
-    "next": "15.3.0",
+    "next": "15.3.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-toastify": "^11.0.5",
@@ -27,7 +27,7 @@
     "@types/react-dom": "^19",
     "daisyui": "^5.0.23",
     "eslint": "^9",
-    "eslint-config-next": "15.3.0",
+    "eslint-config-next": "15.3.6",
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "typescript": "^5"
