@@ -11,7 +11,6 @@ import { toast } from 'react-toastify'
 
 const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
 
-
     const { user } = useUser()
     const email = user?.primaryEmailAddress?.emailAddress as string
     const [product, setProduct] = useState<Product | null>(null)
@@ -39,7 +38,7 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                         name: fetchedProduct.name,
                         description: fetchedProduct.description,
                         price: fetchedProduct.price,
-                        imageUrl: fetchedProduct.imageUrl,
+                        imageUrl: fetchedProduct.imageUrl || "",
                         categoryName: fetchedProduct.categoryName
                     })
                 }
@@ -51,8 +50,8 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
 
     useEffect(() => {
         fetchProduct()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [email])
-
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target
@@ -68,7 +67,6 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
-
         let imageUrl = formData?.imageUrl
 
         e.preventDefault()
@@ -102,20 +100,24 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                 await updateProduct(formData, email)
                 toast.success("Produit mis à jour avec succès !")
                 router.push("/products")
+            } else {
+                // Si pas de nouvelle image, juste mettre à jour le produit
+                await updateProduct(formData, email)
+                toast.success("Produit mis à jour avec succès !")
+                router.push("/products")
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error(error)
-            toast.error(error.message)
+            toast.error(error instanceof Error ? error.message : "Erreur lors de la mise à jour")
         }
     }
-
 
     return (
         <Wrapper>
             <div>
                 {product ? (
                     <div>
-                        <h1 className='text-2xl font-bold  mb-4'>
+                        <h1 className='text-2xl font-bold mb-4'>
                             Mise à jour du produit
                         </h1>
                         <div className='flex md:flex-row flex-col md:items-center'>
@@ -138,7 +140,6 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                                     onChange={handleInputChange}
                                 >
                                 </textarea>
-
 
                                 <div className='text-sm font-semibold mb-2'>Catégorie</div>
                                 <input
@@ -176,8 +177,7 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                             </form>
 
                             <div className='flex md:flex-col md:ml-4 mt-4 md:mt-0'>
-
-                                <div className='md:ml-4 md:w-[200px] mt-4 md:mt-0 border-2 border-primary md:h-[200px] p-5  justify-center items-center rounded-3xl hidden md:flex'>
+                                <div className='md:ml-4 md:w-[200px] mt-4 md:mt-0 border-2 border-primary md:h-[200px] p-5 justify-center items-center rounded-3xl hidden md:flex'>
                                     {formData.imageUrl && formData.imageUrl !== "" ? (
                                         <div>
                                             <ProductImage
@@ -210,7 +210,6 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                                         </div>
                                     )}
                                 </div>
-
                             </div>
                         </div>
                     </div>
@@ -219,7 +218,6 @@ const Page = ({ params }: { params: Promise<{ productId: string }> }) => {
                         <span className="loading loading-spinner loading-xl"></span>
                     </div>
                 )}
-
             </div>
         </Wrapper>
     )
