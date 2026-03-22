@@ -1,7 +1,5 @@
-import { existsSync } from "fs";
-import { mkdir, writeFile, unlink } from "fs/promises";
-import { NextRequest, NextResponse } from "next/server";
-import { join } from "path";
+import { put, del } from '@vercel/blob';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
     try {
@@ -15,7 +13,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validation du type de fichier (optionnel mais recommandé)
+        // Validation du type de fichier
         const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
         if (!allowedTypes.includes(file.type)) {
             return NextResponse.json(
@@ -24,24 +22,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+        // Upload vers Vercel Blob
+        const blob = await put(file.name, file, {
+            access: 'public',
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
 
-        const uploadDir = join(process.cwd(), "public", "uploads");
-        if (!existsSync(uploadDir)) {
-            await mkdir(uploadDir, { recursive: true });
-        }
-
-        const ext = file.name.split('.').pop();
-        const uniqueName = crypto.randomUUID() + '.' + ext;
-        const filePath = join(uploadDir, uniqueName);
-        await writeFile(filePath, buffer);
-        
-        const publicPath = `/uploads/${uniqueName}`;
-        
         return NextResponse.json({ 
             success: true, 
-            path: publicPath,
+            path: blob.url,
             message: "Fichier uploadé avec succès."
         });
         
@@ -69,16 +58,11 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        const filePath = join(process.cwd(), "public", path);
-
-        if (!existsSync(filePath)) {
-            return NextResponse.json(
-                { success: false, message: "Fichier non trouvé." },
-                { status: 404 }
-            );
-        }
-
-        await unlink(filePath);
+        // Supprimer du Vercel Blob
+        await del(path, {
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
+        
         return NextResponse.json(
             { success: true, message: "Fichier supprimé avec succès." },
             { status: 200 }
