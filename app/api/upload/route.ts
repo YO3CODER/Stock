@@ -1,5 +1,12 @@
-import { put, del } from '@vercel/blob';
+import { v2 as cloudinary } from 'cloudinary';
 import { NextRequest, NextResponse } from 'next/server';
+
+// Configuration Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(request: NextRequest) {
     try {
@@ -13,7 +20,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validation du type de fichier
+        // Validation du type
         const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
         if (!allowedTypes.includes(file.type)) {
             return NextResponse.json(
@@ -22,31 +29,32 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validation de la taille (max 5MB)
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            return NextResponse.json(
-                { success: false, message: "Fichier trop volumineux. Maximum 5MB." },
-                { status: 400 }
-            );
-        }
+        // Convertir le fichier en buffer
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
 
-        // Générer un nom unique
-        const timestamp = Date.now();
-        const safeName = file.name.replace(/\s/g, '-');
-        const uniqueName = `${timestamp}-${safeName}`;
-
-        // Upload vers Vercel Blob en mode privé
-        const blob = await put(uniqueName, file, {
-            access: 'private',
-            token: process.env.BLOB_READ_WRITE_TOKEN,
+        // Upload vers Cloudinary
+        const result = await new Promise((resolve, reject) => {
+            cloudinary.uploader.upload_stream(
+                {
+                    folder: "asso-stock",
+                    resource_type: "auto",
+                    transformation: [{ quality: "auto", fetch_format: "auto" }]
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            ).end(buffer);
         });
 
-        console.log("Upload réussi:", blob.url);
+        const imageUrl = (result as any).secure_url;
+        
+        console.log("Upload réussi:", imageUrl);
 
         return NextResponse.json({ 
             success: true, 
-            path: blob.url,
+            path: imageUrl,
             message: "Fichier uploadé avec succès."
         });
         
@@ -74,9 +82,13 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        await del(path, {
-            token: process.env.BLOB_READ_WRITE_TOKEN,
-        });
+        // Extraire l'ID public depuis l'URL Cloudinary
+        const publicId = path.split('/').pop()?.split('.')[0];
+        
+        if (publicId) {
+            await cloudinary.uploader.destroy(`asso-stock/${publicId}`);
+            console.log("Image supprimée:", publicId);
+        }
         
         return NextResponse.json(
             { success: true, message: "Fichier supprimé avec succès." },

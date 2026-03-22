@@ -10,38 +10,22 @@ interface ProductImageProps {
     widthClass?: string;
 }
 
-// Fonction helper pour les URLs d'images
-function getImageUrl(url: string | null | undefined): string {
-    if (!url) return '/placeholder-image.jpg';
-    
-    // Si c'est une URL de Vercel Blob privé, passer par notre endpoint
-    if (url.includes('vercel-storage.com') || url.includes('private.blob')) {
-        return `/api/image/${encodeURIComponent(url)}`;
-    }
-    
-    return url;
-}
-
 const ProductImage: React.FC<ProductImageProps> = ({ 
     src, 
     alt, 
     heightClass = 'h-40', 
     widthClass = 'w-40' 
 }) => {
-    const imageSrc = getImageUrl(src);
+    const imageUrl = src || '/placeholder-image.jpg';
     
     return (
         <div className={`relative ${heightClass} ${widthClass}`}>
             <Image
-                src={imageSrc}
+                src={imageUrl}
                 alt={alt}
                 fill
                 className="object-cover rounded-lg"
-                onError={(e) => {
-                    // En cas d'erreur, afficher une image par défaut
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder-image.jpg';
-                }}
+                unoptimized // Pour Cloudinary qui a déjà ses propres optimisations
             />
         </div>
     );
