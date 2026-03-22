@@ -69,9 +69,11 @@ const Navbar = () => {
                         <div className='p-2'>
                             <PackagePlus className='w-6 h-6 text-primary' />
                         </div>
-                        <span className='font-bold text-xl'>
-                            Monity 
+                        <Link href="/">
+                        <span className='ml-2 sm:ml-3 font-bold text-xl sm:text-2xl italic'>
+                            Mon<span className='text-accent'>ity</span>
                         </span>
+                    </Link>
                     </div>
                     <div className='w-8 h-8 rounded-full bg-gray-200 animate-pulse' />
                 </div>
