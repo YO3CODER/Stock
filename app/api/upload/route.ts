@@ -1,4 +1,4 @@
-import { put, del } from '@vercel/blob';
+import { put, del, head } from '@vercel/blob';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -22,11 +22,28 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Validation de la taille (max 5MB)
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            return NextResponse.json(
+                { success: false, message: "Fichier trop volumineux. Maximum 5MB." },
+                { status: 400 }
+            );
+        }
+
+        // Générer un nom unique pour éviter les conflits
+        const timestamp = Date.now();
+        const safeName = file.name.replace(/\s/g, '-');
+        const uniqueName = `${timestamp}-${safeName}`;
+
+        console.log("Upload du fichier:", uniqueName); // Log pour déboguer
+
         // Upload vers Vercel Blob
-        const blob = await put(file.name, file, {
+        const blob = await put(uniqueName, file, {
             access: 'public',
-            token: process.env.BLOB_READ_WRITE_TOKEN,
         });
+
+        console.log("Upload réussi:", blob.url);
 
         return NextResponse.json({ 
             success: true, 
@@ -58,10 +75,22 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
+        console.log("Suppression du fichier:", path);
+
+        // Vérifier si le fichier existe avant suppression
+        try {
+            await head(path);
+        } catch {
+            return NextResponse.json(
+                { success: false, message: "Fichier non trouvé." },
+                { status: 404 }
+            );
+        }
+
         // Supprimer du Vercel Blob
-        await del(path, {
-            token: process.env.BLOB_READ_WRITE_TOKEN,
-        });
+        await del(path);
+        
+        console.log("Suppression réussie:", path);
         
         return NextResponse.json(
             { success: true, message: "Fichier supprimé avec succès." },
