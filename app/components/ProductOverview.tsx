@@ -59,7 +59,7 @@ const ProductOverview = ({ email }: { email: string }) => {
                     <div className='border-2 p-4 border-base-200 rounded-3xl'>
                         <p className='stat-title'>Valeur totale du stock</p>
                         <div className='flex justify-between items-center'>
-                            <div className='stat-value'>{formatNumber (stats.stockValue)} FCFA</div>
+                            <div className='stat-value text-sm'>{formatNumber (stats.stockValue)} FCFA</div>
                             <div className='bg-primary/25 p-3 rounded-full'>
                                 <DollarSign className='w-5 h-5 text-primary text-3xl' />
                             </div>
