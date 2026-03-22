@@ -36,8 +36,14 @@ const CategoryChart = ({ email }: { email: string }) => {
       fetchStats()
   }, [email])
 
-  // Custom Tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  // Custom Tooltip - sans any
+  interface TooltipProps {
+    active?: boolean;
+    payload?: { value: number }[];
+    label?: string;
+  }
+
+  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 shadow-lg rounded-lg border border-gray-200">
@@ -63,6 +69,13 @@ const CategoryChart = ({ email }: { email: string }) => {
         />
       </div>
     )
+  }
+
+  // Interface pour les props du tick
+  interface TickProps {
+    x: number;
+    y: number;
+    payload: { value: string };
   }
 
   return (
@@ -95,7 +108,7 @@ const CategoryChart = ({ email }: { email: string }) => {
             dataKey="name"
             axisLine={false}
             tickLine={false}
-            tick={(props: any) => {
+            tick={(props: TickProps) => {
               const { x, y, payload } = props
               return (
                 <g transform={`translate(${x},${y})`}>
@@ -149,11 +162,11 @@ const CategoryChart = ({ email }: { email: string }) => {
                 fill={COLORS[index % COLORS.length]}
                 fillOpacity={0.8}
                 style={{ cursor: 'pointer' }}
-                onMouseEnter={(e: any) => {
-                  e.target.style.fillOpacity = 1
+                onMouseEnter={(e: React.MouseEvent<SVGElement>) => {
+                  (e.target as SVGElement).style.fillOpacity = '1'
                 }}
-                onMouseLeave={(e: any) => {
-                  e.target.style.fillOpacity = 0.8
+                onMouseLeave={(e: React.MouseEvent<SVGElement>) => {
+                  (e.target as SVGElement).style.fillOpacity = '0.8'
                 }}
               />
             ))}
