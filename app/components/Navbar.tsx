@@ -86,11 +86,13 @@ const Navbar = () => {
             <div className='flex justify-between items-center'>
                 <div className='flex items-center'>
                     <div className='p-2'>
-                        <PackagePlus className='w-6 h-6 text-primary' />
+                        <PackagePlus className='w-6 h-6 text-primary ml-2' />
                     </div>
-                    <span className='font-bold text-xl'>
-                        Monity
-                    </span>
+                    <Link href="/">
+                        <span className='ml-2 sm:ml-3 font-bold text-xl sm:text-2xl italic text-primary'>
+                            Mon<span className='text-accent'>ity</span>
+                        </span>
+                    </Link>
                 </div>
 
                 <button
